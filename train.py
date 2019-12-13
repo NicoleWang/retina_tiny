@@ -19,13 +19,14 @@ import torchvision
 import model
 from anchors import Anchors
 import losses
-from dataloader import CocoDataset, CSVDataset, collater, Resizer, AspectRatioBasedSampler, Augmenter, UnNormalizer, Normalizer
+#from dataloader import CocoDataset, CSVDataset, collater, Resizer, AspectRatioBasedSampler, Augmenter, UnNormalizer, Normalizer
+from dataloader import CSVDataset, collater, Resizer, AspectRatioBasedSampler, Augmenter, UnNormalizer, Normalizer
 from torch.utils.data import Dataset, DataLoader
 
-import coco_eval
+#import coco_eval
 import csv_eval
 
-assert torch.__version__.split('.')[1] == '4'
+#assert torch.__version__.split('.')[1] == '4'
 
 print('CUDA available: {}'.format(torch.cuda.is_available()))
 
@@ -47,12 +48,13 @@ def main(args=None):
 
 	# Create the data loaders
 	if parser.dataset == 'coco':
+            pass
 
-		if parser.coco_path is None:
-			raise ValueError('Must provide --coco_path when training on COCO,')
+		#if parser.coco_path is None:
+		#	raise ValueError('Must provide --coco_path when training on COCO,')
 
-		dataset_train = CocoDataset(parser.coco_path, set_name='train2017', transform=transforms.Compose([Normalizer(), Augmenter(), Resizer()]))
-		dataset_val = CocoDataset(parser.coco_path, set_name='val2017', transform=transforms.Compose([Normalizer(), Resizer()]))
+		#dataset_train = CocoDataset(parser.coco_path, set_name='train2017', transform=transforms.Compose([Normalizer(), Augmenter(), Resizer()]))
+		#dataset_val = CocoDataset(parser.coco_path, set_name='val2017', transform=transforms.Compose([Normalizer(), Resizer()]))
 
 	elif parser.dataset == 'csv':
 
@@ -74,7 +76,7 @@ def main(args=None):
 	else:
 		raise ValueError('Dataset type not understood (must be csv or coco), exiting.')
 
-	sampler = AspectRatioBasedSampler(dataset_train, batch_size=2, drop_last=False)
+	sampler = AspectRatioBasedSampler(dataset_train, batch_size=32, drop_last=False)
 	dataloader_train = DataLoader(dataset_train, num_workers=3, collate_fn=collater, batch_sampler=sampler)
 
 	if dataset_val is not None:
@@ -104,21 +106,21 @@ def main(args=None):
 
 	retinanet.training = True
 
-	optimizer = optim.Adam(retinanet.parameters(), lr=1e-5)
+	optimizer = optim.Adam(retinanet.parameters(), lr=1e-3)
 
 	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=3, verbose=True)
 
 	loss_hist = collections.deque(maxlen=500)
 
 	retinanet.train()
-	retinanet.module.freeze_bn()
+	#retinanet.module.freeze_bn()
 
 	print('Num training images: {}'.format(len(dataset_train)))
 
 	for epoch_num in range(parser.epochs):
 
 		retinanet.train()
-		retinanet.module.freeze_bn()
+		#retinanet.module.freeze_bn()
 		
 		epoch_loss = []
 		
@@ -158,7 +160,7 @@ def main(args=None):
 
 			print('Evaluating dataset')
 
-			coco_eval.evaluate_coco(dataset_val, retinanet)
+			#coco_eval.evaluate_coco(dataset_val, retinanet)
 
 		elif parser.dataset == 'csv' and parser.csv_val is not None:
 
@@ -169,7 +171,7 @@ def main(args=None):
 		
 		scheduler.step(np.mean(epoch_loss))	
 
-		torch.save(retinanet.module, '{}_retinanet_{}.pt'.format(parser.dataset, epoch_num))
+		torch.save(retinanet.module, 'outputs/aic1/{}_layer04_retinanet_{}.pt'.format(parser.dataset, epoch_num))
 
 	retinanet.eval()
 
